@@ -6,7 +6,6 @@
 
 #include <iostream>
 #include <vector>
-#include <fstream>
 #include <cmath>
 #include <thread>
 #include <cstdio>
@@ -17,11 +16,8 @@
 #include "stb_image_write.h"
 
 using namespace std;
-using namespace std::this_thread; // sleep_for, sleep_until
-
 
 const int CHANNELS = 3;
-const auto PROCESSOR_COUNT = thread::hardware_concurrency();
 
 #ifndef IMAGE_H
 #define IMAGE_H
@@ -600,14 +596,6 @@ void write_video() {
  * @return int 
  */
 int main() {
-    // char image_mode;
-    // cout << "Image or video: (i/v)\n";
-    // cin >> image_mode;
-
-    // if (image_mode == 'i') {
-        write_image();
-    // } else {
-    //     write_video();
-    // }
+    write_image();
     return 0;
 }
