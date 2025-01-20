@@ -10,8 +10,8 @@ Hello! I decided to make an ascii art generator in C++. I use the stbi image hea
 
 Use the provided make file to compile the program with `make`. 
 
-![IMPORTANT] 
-If this doesn't work try deleting all cmake related files except `CMakeLists.txt` and running `cmake ./`, then `make`.
+> [!IMPORTANT] 
+> If this doesn't work try deleting all cmake related files except `CMakeLists.txt` and running `cmake ./`, then `make`.
 
 ### Use:
 
