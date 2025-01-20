@@ -1,0 +1,1 @@
+/usr/local/bin/g++-14  -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/ascii.dir/main.cc.o CMakeFiles/ascii.dir/image.cc.o -o ascii
