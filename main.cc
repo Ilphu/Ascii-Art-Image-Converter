@@ -50,7 +50,7 @@ void write_image() {
     string output_filename;
     int scalar;
     int dog_threshold = 0;
-    cout << "Input image filename including extention:\n";
+    cout << "PATH to input image eg: `Examples/helloworld.jpg`\n";
     cin >> img_filename;
     
     Image img;
@@ -68,9 +68,9 @@ void write_image() {
 
     cout << "Input image dimensions:\n" << img.get_width() <<
     " x " << img.get_height() << endl;
-    cout << "Downscaling factor (≥ 8): \n";
+    cout << "Downscaling factor (multiple of 8): \n";
     cin >> scalar;
-    cout << "Output \"filename\".png: \n";
+    cout << "PATH output image eg: `Examples/helloworld_ascii.jpg\n";
     cin >> output_filename;
     
     img.set_dog_threshold(dog_threshold);
