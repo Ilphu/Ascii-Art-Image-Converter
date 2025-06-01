@@ -11,6 +11,8 @@ const int CHANNELS = 3;
 #include <cmath>
 #include <thread>
 #include <cstdio>
+#include <filesystem>
+#include <algorithm>
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -18,9 +20,13 @@ const int CHANNELS = 3;
 #include "image.h"
 
 using namespace std;
+namespace fs = filesystem;
 
 
-void write_frame(const int& scalar, const int& first_frame, const int& num_frames, const vector<string>& frame_filenames, const vector<string>& output_frame_filenames) {
+void write_frame(const int& scalar, const int& first_frame, const int& num_frames, 
+                 const vector<string>& frame_filenames, 
+                 const vector<string>& output_frame_filenames) {
+
     for (int i = first_frame; i < (first_frame + num_frames); i++) {
         Image frame;
         bool palette_success = frame.load_palette();
@@ -41,7 +47,8 @@ void write_frame(const int& scalar, const int& first_frame, const int& num_frame
         }
         frame.to_ascii_index(scalar);
         frame.to_ascii_png();
-        cout << "Frame " << (i + 1 - first_frame) << " of " << num_frames << ": " << ((i + 1 - first_frame) * 100) / num_frames << "%\n";
+        cout << "Frame " << (i + 1 - first_frame) << " of " << num_frames << ": " 
+             << ((i + 1 - first_frame) * 100) / num_frames << "%\n";
     }
 }
 
@@ -50,7 +57,7 @@ void write_image() {
     string output_filename;
     int scalar;
     int dog_threshold = 0;
-    cout << "PATH to input image eg: `Examples/helloworld.jpg`\n";
+    cout << "PATH to input image eg: `examples/helloworld.jpg`\n";
     cin >> img_filename;
     
     Image img;
@@ -70,7 +77,7 @@ void write_image() {
     " x " << img.get_height() << endl;
     cout << "Downscaling factor (multiple of 8): \n";
     cin >> scalar;
-    cout << "PATH output image eg: `Examples/helloworld_ascii.jpg\n";
+    cout << "PATH output image ending in `.png` eg: `examples/helloworld_ascii.png`\n";
     cin >> output_filename;
     
     img.set_dog_threshold(dog_threshold);
@@ -80,47 +87,79 @@ void write_image() {
 }
 
 void write_video() {
-    string frame_filename_base = "dandadan_0008";
-    string output_frame_base = "dandadan_ascii_";
-    int num_frames = 2798;
+    string frame_filename_base;
+    string output_frame_base;
+    int num_frames;
+
+    cout << "Input filename base:" << endl;
+    cin >> frame_filename_base;
+    cout << "Output filename base:" << endl;
+    cin >> output_frame_base;
+    cout << "Number of frames:" << endl;
+    cin >> num_frames;
 
     vector<string> frame_filenames;
     vector<string> output_frame_filenames;
     for (int i = 0; i < num_frames; i++) {
-        if (i < 10) {
-            frame_filenames.emplace_back(frame_filename_base + "640" + to_string(i) + ".png");
-            output_frame_filenames.emplace_back(output_frame_base + "000" + to_string(i) + ".png");
-        } else if (i < 100) {
-            frame_filenames.emplace_back(frame_filename_base + "64" + to_string(i) + ".png");
-            output_frame_filenames.emplace_back(output_frame_base + "00" + to_string(i) + ".png");
-        } else if (i < 600) {
-            frame_filenames.emplace_back(frame_filename_base + "6" + to_string(i + 400) + ".png");
-            output_frame_filenames.emplace_back(output_frame_base + "0" + to_string(i) + ".png");
-        } else if (i < 1000) {
-            frame_filenames.emplace_back(frame_filename_base + to_string(i + 6400) + ".png");
-            output_frame_filenames.emplace_back(output_frame_base + "0" + to_string(i) + ".png");
-        // } else if (i < 2000) {
-        //     frame_filenames.emplace_back(frame_filename_base + "0" + to_string(i + 8000) + ".png");
-        //     output_frame_filenames.emplace_back(output_frame_base + to_string(i) + ".png");
-        } else {
-            frame_filenames.emplace_back(frame_filename_base + to_string(i + 6400) + ".png");
-            output_frame_filenames.emplace_back(output_frame_base + to_string(i) + ".png");
-        }
+        frame_filenames.push_back("examples/input_frames/" + frame_filename_base + to_string(i + 1) + ".png");
+        output_frame_filenames.push_back("examples/output_frames/" + output_frame_base + to_string(i + 1) + ".png");
+        cout << frame_filenames[i] << endl;
     }
     
     int scalar = 8;
     int num_threads = 4;
     int frames_per_thread = num_frames / num_threads;
 
-    thread th0(write_frame, scalar, (0 * frames_per_thread), frames_per_thread, frame_filenames, output_frame_filenames);
-    thread th1(write_frame, scalar, (1 * frames_per_thread), frames_per_thread, frame_filenames, output_frame_filenames);
-    thread th2(write_frame, scalar, (2 * frames_per_thread), frames_per_thread, frame_filenames, output_frame_filenames);
-    thread th3(write_frame, scalar, (3 * frames_per_thread), frames_per_thread + (num_frames % num_threads), frame_filenames, output_frame_filenames);
+    vector<thread*> thread_grp;
 
-    th0.join();
-    th1.join();
-    th2.join();
-    th3.join();
+    for (int i = 0; i < num_threads; i++) {
+        thread_grp.push_back(new thread(write_frame, scalar, i * frames_per_thread, 
+                    frames_per_thread, frame_filenames, output_frame_filenames));
+    }
+
+    for (int i = 0; i < num_threads; i++) {
+        thread_grp[i]->join();
+        delete thread_grp[i];
+    }
+}
+
+void write_curses(string img_filename, WINDOW * win) {
+    
+    Image img;
+    img.set_filename(img_filename);
+    bool success = img.load();
+    if (!success) {
+        cout << "Error loading image\n";
+        return;
+    }
+
+    int width, height;
+    getmaxyx(win, height, width);
+
+    img.set_dog_threshold(0);
+    img.to_curses(win);
+}
+
+void get_files(const string& path, vector<string>& dir) {
+    for (const auto & entry : fs::directory_iterator(path)) {
+        dir.push_back(entry.path().filename().string());
+    }
+    sort(dir.begin(), dir.end());
+}
+
+void curses_video() {
+    initscr();
+    cbreak();
+    noecho();
+    vector<string> dir;
+    get_files("/Users/garrettrhoads/Documents/programmingProjects/CPP/Personal/Ascii-Art-Image-Converter/examples/input_frames", dir);
+    for (size_t frame = 0; frame < dir.size(); frame++) {
+        //cout << dir[frame] << endl;
+        string filename = "examples/input_frames/" + dir[frame];
+        write_curses(filename.c_str(), stdscr);
+        // clear();
+        // refresh();
+    }
 }
 
 /**
@@ -128,7 +167,11 @@ void write_video() {
  * 
  * @return int 
  */
-int main() {
-    write_image();
+int main(int argc, char ** argv) {
+    if ((argc == 2) && (strcmp(argv[1], "--video") == 0)) {
+        write_video();
+    } else {
+        curses_video();
+    }
     return 0;
 }

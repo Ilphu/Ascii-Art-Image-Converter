@@ -8,16 +8,13 @@ Hello! I decided to make an ascii art generator in C++. I use the stbi image hea
 
 ## How to use?
 
-### Compilation:
+### Compilation: 
 
-Use the provided make file to compile the program with `make`. 
-
-> [!IMPORTANT] 
-> If this doesn't work try deleting all cmake related files except `CMakeLists.txt` and running `cmake ./`, then `make`.
+Simply run `cmake ./ && make` to create the `Makefile` and `make` the `ascii` binary. Then execute with `./ascii` and do as prompted.
 
 ### Use:
 
-Run `./ascii` and follow the prompts it gives, to be safe only use downscaling factors that are multiples of 8.
+Run `./ascii` and follow the prompts it gives, to be safe only use downscaling factors that are multiples of 8. If you want to change the ascii characters that are used or the color that they are, simply change the `palette.png` image or create your own and name it `palette.png`.
 
 ## Examples and Extra Info:
 

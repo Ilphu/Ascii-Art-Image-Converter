@@ -1,0 +1,10 @@
+.vscode
+build
+CmakeFiles
+*.cmake
+CMakeCache.txt
+Makefile
+examples/input_frames
+examples/output_frames
+ascii
+.DS_Store

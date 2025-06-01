@@ -1,8 +1,16 @@
+/**
+ * @file image.cc
+ * @author Garrett Rhoads
+ * @brief Image methods
+ * @date 2025-01-20
+ */
+
 #include <iostream>
 #include <vector>
 #include <cmath>
 #include <thread>
 #include <cstdio>
+#include <ctime>
 #include "image.h"
 #include "stb_image.h"
 #include "stb_image_write.h"
@@ -64,7 +72,7 @@ void Image::to_ascii_index(const int& scalar) {
     scaled_greyscale_image();
 
     dog(); 
-    
+   
     for (int i = 0; i < _scaled_height; i++) {
         for (int j = 0; j < _scaled_width; j++) {
             if ((!((i == 0) || (j == 0) || (i == (_scaled_height - 1)) || 
@@ -85,8 +93,7 @@ void Image::to_ascii_index(const int& scalar) {
                 }
             } else {
                 avg_lumin = _greyscale_image[i][j] * 100;
-                ascii_idx = (avg_lumin / (25500 / 
-                (_num_quantized_lumin - 1)));
+                ascii_idx = (avg_lumin / (25500 / (_num_quantized_lumin - 1)));
                 _ascii_indeces_row.push_back(ascii_idx);
                 
             }
@@ -343,6 +350,70 @@ void Image::dog() {
     }
 }
 
+void Image::to_curses(WINDOW * win) {
+    // clock_t start, end;
+    // double time_elapsed;
+    int win_height, win_width;
+    getmaxyx(win, win_height, win_width);
+    win_width /= 2;
+    double win_aspect = static_cast<double>(win_width) / win_height;
+    double img_aspect = static_cast<double>(_width) / _height;
+
+    // cout << "win_aspect = " << win_width << "/" << win_height << " = " << win_aspect << "    img_aspect = " << _width << "/" << _height << " = " << img_aspect << endl;
+
+    _scalar = ((img_aspect > win_aspect) ? (_width / win_width) : (_height / win_height)) + 1;
+    // cout << "scalar = " << _scalar << endl;
+    _scaled_width = _width / _scalar;
+    _scaled_height = _height / _scalar;
+
+    // cout << "_scaled_width = " << _scaled_width << "    _scaled_height = " << _scaled_height << endl;
+
+    scaled_greyscale_image();
+
+    dog();
+
+    vector<int> _ascii_indeces_row;
+
+    int avg_lumin;
+    int ascii_idx;
+    double theta;
+
+    for (int i = 0; i < _scaled_height; i++) {
+        for (int j = 0; j < _scaled_width; j++) {
+            bool is_border = (i == 0) || (j == 0) || (i == _scaled_height - 1)|| 
+                             (j == _scaled_width - 1);
+            bool is_dark = _greyscale_image[i][j] < 192;
+            if (!is_border && sobel(j, i, theta) && is_dark) {
+                
+                if ((theta < 0.1) || (theta > 0.9)) {
+                    // _ascii_indeces_row.push_back(10);
+                    mvwaddch(win, i, j * 2, _ascii_palette[10]);
+                    mvwaddch(win, i, (j * 2) + 1, _ascii_palette[10]);
+                } else if (theta < 0.4) {
+                    // _ascii_indeces_row.push_back(11);
+                    mvwaddch(win, i, j * 2, _ascii_palette[11]);
+                    mvwaddch(win, i, (j * 2) + 1, _ascii_palette[11]);
+                } else if (theta < 0.6) {
+                    // _ascii_indeces_row.push_back(12);
+                    mvwaddch(win, i, j * 2, _ascii_palette[12]);
+                    mvwaddch(win, i, (j * 2) + 1, _ascii_palette[12]);
+                } else {
+                    // _ascii_indeces_row.push_back(13);
+                    mvwaddch(win, i, j * 2, _ascii_palette[13]);
+                    mvwaddch(win, i, (j * 2) + 1, _ascii_palette[13]);
+                }
+            } else {
+                avg_lumin = _greyscale_image[i][j] * 100;
+                ascii_idx = (avg_lumin / (25500 / (_num_quantized_lumin - 1)));
+                mvwaddch(win, i, j * 2, _ascii_palette[ascii_idx]);
+                mvwaddch(win, i, (j * 2) + 1, _ascii_palette[ascii_idx]);
+            }
+        }
+    }
+
+    wrefresh(win);
+}
+
 /**
  * @brief Instanciates the output array with the correct rgb values to be written
  */
@@ -367,7 +438,7 @@ void Image::to_ascii_png() {
             }
         }
     }
-    stbi_write_png(_output_filename.c_str(), _scaled_width * 8, _scaled_height 
-                   * 8, CHANNELS, _output, _scaled_width * 8 * CHANNELS);
+    stbi_write_png(_output_filename.c_str(), _scaled_width * _scalar, _scaled_height 
+                   * _scalar, CHANNELS, _output, _scaled_width * _scalar * CHANNELS);
     delete[] _output;
 }

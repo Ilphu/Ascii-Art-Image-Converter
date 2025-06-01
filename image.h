@@ -1,3 +1,10 @@
+/**
+ * @file image.h
+ * @author Garrett Rhoads
+ * @brief Image class definition
+ * @date 2025-01-20
+ */
+
 #ifndef IMAGE_H
 #define IMAGE_H
 
@@ -6,6 +13,7 @@
 #include <cmath>
 #include <thread>
 #include <cstdio>
+#include <ncurses.h>
 
 using namespace std;
 
@@ -18,6 +26,7 @@ public:
 
     void to_ascii_index(const int& scalar);
     void to_ascii_png();
+    void to_curses(WINDOW * win);
     bool load();
     bool load_palette();
     int get_width() const;
@@ -42,11 +51,11 @@ private:
 // Attributes
     vector<unsigned char> _image;
     unsigned char *_output;
-    vector<vector<vector<unsigned char> > > _palette;
-    vector<vector<int> > _greyscale_image;
-    vector<vector<int> > _dog;
-    vector<vector<int> > _ascii_indeces;
-    //vector<vector<vector<int> > > _rgb_data;
+    vector<vector<vector<unsigned char>>> _palette;
+    string _ascii_palette = " ,;oeb%@#M-\\|/";
+    vector<vector<int>> _greyscale_image;
+    vector<vector<int>> _dog;
+    vector<vector<int>> _ascii_indeces;
     int _width;
     int _height;
     int _palette_width;
@@ -58,7 +67,6 @@ private:
     string _filename;
     string _output_filename;
     const int _num_quantized_lumin = 10;
-    //const string _ascii_luminance = " .:cCoPO0@";
 };
 
 #endif
