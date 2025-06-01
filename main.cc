@@ -160,6 +160,7 @@ void curses_video() {
         // clear();
         // refresh();
     }
+    endwin();
 }
 
 /**
