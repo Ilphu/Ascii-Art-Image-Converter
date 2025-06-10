@@ -17,9 +17,11 @@ const int CHANNELS = 3;
 #include "stb_image.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
+//#include <opencv2/opencv.hpp>
 #include "image.h"
 
 using namespace std;
+using namespace cv;
 namespace fs = filesystem;
 
 
@@ -124,7 +126,6 @@ void write_video() {
 }
 
 void write_curses(string img_filename, WINDOW * win) {
-    
     Image img;
     img.set_filename(img_filename);
     bool success = img.load();
@@ -133,8 +134,8 @@ void write_curses(string img_filename, WINDOW * win) {
         return;
     }
 
-    int width, height;
-    getmaxyx(win, height, width);
+    // int width, height;
+    // getmaxyx(win, height, width);
 
     img.set_dog_threshold(0);
     img.to_curses(win);
@@ -163,6 +164,48 @@ void curses_video() {
     endwin();
 }
 
+void mirror() {
+    VideoCapture cap;
+    cap.open(0);
+
+    cap.set(CAP_PROP_FRAME_WIDTH, 600);
+    cap.set(CAP_PROP_FRAME_HEIGHT, 375);
+    //cout << "here" << endl;
+
+    Mat frame;
+    size_t frame_count = 0;
+
+    initscr();
+    cbreak();
+    noecho();
+
+    while (true) {
+        //cout << frame_count << endl;
+        bool ret = cap.read(frame);
+        if (!ret || frame.empty()) {
+            cerr << "Failed to capture frame" << endl;
+            break;
+        }
+        //imshow("test", frame);
+        Image img;
+        img.load_live(frame);
+    
+        //imshow("Webcam", frame);
+        
+        // Check for key press (wait 1ms)
+        int key = waitKey(1) & 0xFF;
+        if (key == 27 || key == 'q') {  // ESC or 'q'
+            cout << "Goodbye!" << endl;
+            break;
+        }
+        img.set_dog_threshold(0);
+        img.to_curses(stdscr);
+    }
+    endwin();
+    cap.release();
+    destroyAllWindows();
+}
+
 /**
  * @brief I/O and controls operation of the program
  * 
@@ -172,7 +215,7 @@ int main(int argc, char ** argv) {
     if ((argc == 2) && (strcmp(argv[1], "--video") == 0)) {
         write_video();
     } else {
-        curses_video();
+        mirror();
     }
     return 0;
 }

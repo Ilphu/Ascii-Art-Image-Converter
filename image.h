@@ -13,9 +13,11 @@
 #include <cmath>
 #include <thread>
 #include <cstdio>
+#include <opencv2/opencv.hpp>
 #include <ncurses.h>
 
 using namespace std;
+using namespace cv;
 
 class Image {
 public:
@@ -28,6 +30,8 @@ public:
     void to_ascii_png();
     void to_curses(WINDOW * win);
     bool load();
+    void load_live(const Mat & frame);
+    //void scaled_grayscale_image(const Mat & frame);
     bool load_palette();
     int get_width() const;
     int get_height() const;

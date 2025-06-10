@@ -16,6 +16,7 @@
 #include "stb_image_write.h"
 
 using namespace std;
+using namespace cv;
 
 const int CHANNELS = 3;
 
@@ -139,6 +140,40 @@ bool Image::load() {
     return (data != nullptr);
 }
 
+void Image::load_live(const Mat & frame) {
+    // Get frame dimensions and number of channels
+    _height = frame.rows;
+    _width = frame.cols;
+    int channels = frame.channels();
+    
+    // Resize the global vector to accommodate the data
+    _image.resize(_height * _width * channels);
+    
+    // Manual pixel-by-pixel copy using nested loops
+    size_t vectorIndex = 0;
+    
+    for (int row = 0; row < _height; row++) {
+        for (int col = 0; col < _width; col++) {
+            // Get pointer to current pixel
+            const unsigned char* pixel = frame.ptr<unsigned char>(row, col);
+            
+            // Copy all channels for this pixel
+            for (int ch = 0; ch < channels; ch++) {
+                _image[vectorIndex] = pixel[ch];
+                vectorIndex++;
+            }
+        }
+    }
+
+    // for (size_t i = 0; i < _image.size(); i++) {
+    //     if (!((i + 1) % 30)) {
+    //         cout << static_cast<int>(_image[i]) << endl;
+    //     } else {
+    //         cout << static_cast<int>(_image[i]) << ", ";
+    //     }
+    // }
+}
+
 bool Image::load_palette() {
     vector<unsigned char> _palette_1D;
     vector<vector<unsigned char>> palette_row;
@@ -182,7 +217,7 @@ bool Image::load_palette() {
  * @return int - average luminance
  */
 int Image::convolve(const int& x_pos, const int& y_pos) const {
-    const size_t RGBA = 4;
+    const size_t RGBA = 3;
     int r, g, b;
     int avg_lumin = 0;
 
@@ -207,15 +242,27 @@ int Image::convolve(const int& x_pos, const int& y_pos) const {
 void Image::scaled_greyscale_image() {
     vector<int> greyscale_row;
     
-
     for (int i = 0; i < _scaled_height; i++) {
         for (int j = 0; j < _scaled_width; j++) {
+            //cout << i << ", " << j << "  ";
             greyscale_row.push_back(convolve(j, i));
         }
+        //cout << endl;
         _greyscale_image.push_back(greyscale_row);
         greyscale_row.clear();
     }
 }
+
+// void Image::scaled_grayscale_image(const Mat & frame) {
+//     vector<int> greyscale_row;
+
+//     for (int i =0; i < _scaled_height; i++) {
+//         for (int j = 0; j < _scaled_width; j++) {
+//             greyscale_row.push_back()
+//         }
+//     }
+//     Vec3b pixel = frame.at<Vec3b>()
+// }
 
 /**
  * @brief Convolves the kernel with the _greyscale_image at pixel x_pos y_pos
@@ -351,6 +398,7 @@ void Image::dog() {
 }
 
 void Image::to_curses(WINDOW * win) {
+    //cout << "heheuafiu" << endl;
     // clock_t start, end;
     // double time_elapsed;
     int win_height, win_width;
@@ -366,10 +414,15 @@ void Image::to_curses(WINDOW * win) {
     _scaled_width = _width / _scalar;
     _scaled_height = _height / _scalar;
 
-    // cout << "_scaled_width = " << _scaled_width << "    _scaled_height = " << _scaled_height << endl;
-
+    //cout << "_scaled_width = " << _scaled_width << "    _scaled_height = " << _scaled_height << endl;
+    
     scaled_greyscale_image();
-
+    // for (int i = 0; i < _scaled_height; i++) {
+    //     for (int j = 0; j < _scaled_width; j++) {
+    //         cout << _greyscale_image[i][j] << ", ";
+    //     }
+    //     cout << endl;
+    // }
     dog();
 
     vector<int> _ascii_indeces_row;
