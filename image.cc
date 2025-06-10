@@ -141,37 +141,14 @@ bool Image::load() {
 }
 
 void Image::load_live(const Mat & frame) {
-    // Get frame dimensions and number of channels
+    // Get frame dimensions
     _height = frame.rows;
     _width = frame.cols;
-    int channels = frame.channels();
+    size_t totalBytes = frame.total() * frame.elemSize();
     
-    // Resize the global vector to accommodate the data
-    _image.resize(_height * _width * channels);
+    _image.resize(totalBytes);
     
-    // Manual pixel-by-pixel copy using nested loops
-    size_t vectorIndex = 0;
-    
-    for (int row = 0; row < _height; row++) {
-        for (int col = 0; col < _width; col++) {
-            // Get pointer to current pixel
-            const unsigned char* pixel = frame.ptr<unsigned char>(row, col);
-            
-            // Copy all channels for this pixel
-            for (int ch = 0; ch < channels; ch++) {
-                _image[vectorIndex] = pixel[ch];
-                vectorIndex++;
-            }
-        }
-    }
-
-    // for (size_t i = 0; i < _image.size(); i++) {
-    //     if (!((i + 1) % 30)) {
-    //         cout << static_cast<int>(_image[i]) << endl;
-    //     } else {
-    //         cout << static_cast<int>(_image[i]) << ", ";
-    //     }
-    // }
+    memcpy(_image.data(), frame.data, totalBytes);
 }
 
 bool Image::load_palette() {
@@ -398,31 +375,20 @@ void Image::dog() {
 }
 
 void Image::to_curses(WINDOW * win) {
-    //cout << "heheuafiu" << endl;
-    // clock_t start, end;
-    // double time_elapsed;
     int win_height, win_width;
     getmaxyx(win, win_height, win_width);
     win_width /= 2;
     double win_aspect = static_cast<double>(win_width) / win_height;
     double img_aspect = static_cast<double>(_width) / _height;
 
-    // cout << "win_aspect = " << win_width << "/" << win_height << " = " << win_aspect << "    img_aspect = " << _width << "/" << _height << " = " << img_aspect << endl;
-
     _scalar = ((img_aspect > win_aspect) ? (_width / win_width) : (_height / win_height)) + 1;
-    // cout << "scalar = " << _scalar << endl;
     _scaled_width = _width / _scalar;
     _scaled_height = _height / _scalar;
 
-    //cout << "_scaled_width = " << _scaled_width << "    _scaled_height = " << _scaled_height << endl;
+    int x_offset = (win_width - _scaled_width);
+    int y_offset = (win_height - _scaled_height) / 2;
     
     scaled_greyscale_image();
-    // for (int i = 0; i < _scaled_height; i++) {
-    //     for (int j = 0; j < _scaled_width; j++) {
-    //         cout << _greyscale_image[i][j] << ", ";
-    //     }
-    //     cout << endl;
-    // }
     dog();
 
     vector<int> _ascii_indeces_row;
@@ -440,26 +406,26 @@ void Image::to_curses(WINDOW * win) {
                 
                 if ((theta < 0.1) || (theta > 0.9)) {
                     // _ascii_indeces_row.push_back(10);
-                    mvwaddch(win, i, j * 2, _ascii_palette[10]);
-                    mvwaddch(win, i, (j * 2) + 1, _ascii_palette[10]);
+                    mvwaddch(win, i + y_offset, (j * 2) + x_offset, _ascii_palette[10]);
+                    mvwaddch(win, i + y_offset, (j * 2) + x_offset + 1, _ascii_palette[10]);
                 } else if (theta < 0.4) {
                     // _ascii_indeces_row.push_back(11);
-                    mvwaddch(win, i, j * 2, _ascii_palette[11]);
-                    mvwaddch(win, i, (j * 2) + 1, _ascii_palette[11]);
+                    mvwaddch(win, i + y_offset, (j * 2) + x_offset, _ascii_palette[11]);
+                    mvwaddch(win, i + y_offset, (j * 2) + x_offset + 1, _ascii_palette[11]);
                 } else if (theta < 0.6) {
                     // _ascii_indeces_row.push_back(12);
-                    mvwaddch(win, i, j * 2, _ascii_palette[12]);
-                    mvwaddch(win, i, (j * 2) + 1, _ascii_palette[12]);
+                    mvwaddch(win, i + y_offset, (j * 2) + x_offset, _ascii_palette[12]);
+                    mvwaddch(win, i + y_offset, (j * 2) + x_offset + 1, _ascii_palette[12]);
                 } else {
                     // _ascii_indeces_row.push_back(13);
-                    mvwaddch(win, i, j * 2, _ascii_palette[13]);
-                    mvwaddch(win, i, (j * 2) + 1, _ascii_palette[13]);
+                    mvwaddch(win, i + y_offset, (j * 2) + x_offset, _ascii_palette[13]);
+                    mvwaddch(win, i + y_offset, (j * 2) + x_offset + 1, _ascii_palette[13]);
                 }
             } else {
                 avg_lumin = _greyscale_image[i][j] * 100;
                 ascii_idx = (avg_lumin / (25500 / (_num_quantized_lumin - 1)));
-                mvwaddch(win, i, j * 2, _ascii_palette[ascii_idx]);
-                mvwaddch(win, i, (j * 2) + 1, _ascii_palette[ascii_idx]);
+                mvwaddch(win, i + y_offset, (j * 2) + x_offset, _ascii_palette[ascii_idx]);
+                mvwaddch(win, i + y_offset, (j * 2) + x_offset + 1, _ascii_palette[ascii_idx]);
             }
         }
     }

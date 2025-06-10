@@ -173,31 +173,20 @@ void mirror() {
     //cout << "here" << endl;
 
     Mat frame;
-    size_t frame_count = 0;
-
     initscr();
     cbreak();
     noecho();
 
     while (true) {
-        //cout << frame_count << endl;
         bool ret = cap.read(frame);
+        flip(frame, frame, 1);
         if (!ret || frame.empty()) {
             cerr << "Failed to capture frame" << endl;
             break;
         }
-        //imshow("test", frame);
         Image img;
         img.load_live(frame);
     
-        //imshow("Webcam", frame);
-        
-        // Check for key press (wait 1ms)
-        int key = waitKey(1) & 0xFF;
-        if (key == 27 || key == 'q') {  // ESC or 'q'
-            cout << "Goodbye!" << endl;
-            break;
-        }
         img.set_dog_threshold(0);
         img.to_curses(stdscr);
     }
