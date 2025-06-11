@@ -29,6 +29,7 @@ public:
     void to_ascii_index(const int& scalar);
     void to_ascii_png();
     void to_curses(WINDOW * win);
+    void to_curses_multithread(WINDOW * win);
     bool load();
     void load_live(const Mat & frame);
     bool load_palette();
@@ -51,11 +52,14 @@ private:
     void gaussian_blur(vector<vector<int> >& blurred_image, 
                        const vector<int>& kernel);
     void dog(); // woof
+    void to_curses_helper(vector<string>&, int start, int end);
+    char get_edge_character(double theta);
+    
 // Attributes
     vector<unsigned char> _image;
     unsigned char *_output;
     vector<vector<vector<unsigned char>>> _palette;
-    string _ascii_palette = " ,;oeb%@#M-\\|/";
+    string _ascii_palette = " ,;oeb@#MW-\\|/";
     vector<vector<int>> _greyscale_image;
     vector<vector<int>> _dog;
     vector<vector<int>> _ascii_indeces;

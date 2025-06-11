@@ -19,6 +19,7 @@ using namespace std;
 using namespace cv;
 
 const int CHANNELS = 3;
+const int NUM_THREADS = 4;
 
 /**
  * @brief Construct a new Image object
@@ -221,10 +222,8 @@ void Image::scaled_greyscale_image() {
     
     for (int i = 0; i < _scaled_height; i++) {
         for (int j = 0; j < _scaled_width; j++) {
-            //cout << i << ", " << j << "  ";
             greyscale_row.push_back(convolve(j, i));
         }
-        //cout << endl;
         _greyscale_image.push_back(greyscale_row);
         greyscale_row.clear();
     }
@@ -374,6 +373,91 @@ void Image::dog() {
     }
 }
 
+char Image::get_edge_character(double theta) {
+    if ((theta < 0.1) || (theta > 0.9)) {
+        return _ascii_palette[10];
+    } else if (theta < 0.4) {
+        return _ascii_palette[11];
+    } else if (theta < 0.6) {
+        return _ascii_palette[12];
+    } else {
+        return _ascii_palette[13];
+    }
+}
+
+void Image::to_curses_helper(vector<string>& screen_lines, int start, int end) {
+    double theta = 0;
+    int avg_lumin = 0;
+    int ascii_idx = 0;
+    
+    for (int row = start; row < end; row++) {
+        screen_lines[row].reserve(_scaled_width * 2);
+        
+        for (int j = 0; j < _scaled_width; j++) {
+            bool is_border = (row == 0) || (j == 0) || (row == _scaled_height - 1) || (j == _scaled_width - 1);
+            bool is_dark = _greyscale_image[row][j] < 192;
+            
+            char char_to_add;
+            if (!is_border && sobel(j, row, theta) && is_dark) {
+                char_to_add = get_edge_character(theta);
+            } else {
+                avg_lumin = _greyscale_image[row][j] * 100;
+                ascii_idx = (avg_lumin / (25500 / (_num_quantized_lumin - 1)));
+                char_to_add = _ascii_palette[ascii_idx];
+            }
+            
+            screen_lines[row].append(2, char_to_add);
+        }
+    }
+}
+
+void Image::to_curses_multithread(WINDOW * win) {
+    int win_height, win_width;
+    getmaxyx(win, win_height, win_width);
+    win_width /= 2;
+    double win_aspect = static_cast<double>(win_width) / win_height;
+    double img_aspect = static_cast<double>(_width) / _height;
+
+    _scalar = ((img_aspect > win_aspect) ? (_width / win_width) : (_height / win_height)) + 1;
+    _scaled_width = _width / _scalar;
+    _scaled_height = _height / _scalar;
+
+    int x_offset = (win_width - _scaled_width);
+    int y_offset = (win_height - _scaled_height) / 2;
+
+    scaled_greyscale_image();
+    dog();
+    
+    vector<string> screen_lines(_scaled_height);
+    vector<thread> thread_grp;
+    
+    int lines_per_thread = _scaled_height / NUM_THREADS;
+    int remaining_lines = _scaled_height % NUM_THREADS;
+    
+    int current_start = 0;
+    for (int i = 0; i < NUM_THREADS; i++) {
+        int thread_lines = lines_per_thread + (i < remaining_lines ? 1 : 0);
+        int thread_end = current_start + thread_lines;
+        
+        thread_grp.emplace_back(&Image::to_curses_helper, this, 
+                               ref(screen_lines), 
+                               current_start, 
+                               thread_end);
+        
+        current_start = thread_end;
+    }
+    
+    for (auto& t : thread_grp) {
+        t.join();
+    }
+    
+    for (int i = 0; i < _scaled_height; i++) {
+        mvwaddstr(win, i + y_offset, x_offset, screen_lines[i].c_str());
+    }
+    
+    wrefresh(win);
+}
+
 void Image::to_curses(WINDOW * win) {
     int win_height, win_width;
     getmaxyx(win, win_height, win_width);
@@ -387,7 +471,7 @@ void Image::to_curses(WINDOW * win) {
 
     int x_offset = (win_width - _scaled_width);
     int y_offset = (win_height - _scaled_height) / 2;
-    
+
     scaled_greyscale_image();
     dog();
 
@@ -396,7 +480,6 @@ void Image::to_curses(WINDOW * win) {
     int avg_lumin;
     int ascii_idx;
     double theta;
-
     for (int i = 0; i < _scaled_height; i++) {
         for (int j = 0; j < _scaled_width; j++) {
             bool is_border = (i == 0) || (j == 0) || (i == _scaled_height - 1)|| 
@@ -405,19 +488,15 @@ void Image::to_curses(WINDOW * win) {
             if (!is_border && sobel(j, i, theta) && is_dark) {
                 
                 if ((theta < 0.1) || (theta > 0.9)) {
-                    // _ascii_indeces_row.push_back(10);
                     mvwaddch(win, i + y_offset, (j * 2) + x_offset, _ascii_palette[10]);
                     mvwaddch(win, i + y_offset, (j * 2) + x_offset + 1, _ascii_palette[10]);
                 } else if (theta < 0.4) {
-                    // _ascii_indeces_row.push_back(11);
                     mvwaddch(win, i + y_offset, (j * 2) + x_offset, _ascii_palette[11]);
                     mvwaddch(win, i + y_offset, (j * 2) + x_offset + 1, _ascii_palette[11]);
                 } else if (theta < 0.6) {
-                    // _ascii_indeces_row.push_back(12);
                     mvwaddch(win, i + y_offset, (j * 2) + x_offset, _ascii_palette[12]);
                     mvwaddch(win, i + y_offset, (j * 2) + x_offset + 1, _ascii_palette[12]);
                 } else {
-                    // _ascii_indeces_row.push_back(13);
                     mvwaddch(win, i + y_offset, (j * 2) + x_offset, _ascii_palette[13]);
                     mvwaddch(win, i + y_offset, (j * 2) + x_offset + 1, _ascii_palette[13]);
                 }
@@ -429,7 +508,7 @@ void Image::to_curses(WINDOW * win) {
             }
         }
     }
-
+    
     wrefresh(win);
 }
 

@@ -188,7 +188,7 @@ void mirror() {
         img.load_live(frame);
     
         img.set_dog_threshold(0);
-        img.to_curses(stdscr);
+        img.to_curses_multithread(stdscr);
     }
     endwin();
     cap.release();
