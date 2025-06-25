@@ -10,3 +10,5 @@ examples/input_frames
 examples/output_frames
 ascii
 .DS_Store
+.gitignore
+.image_cmp.cc

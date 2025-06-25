@@ -133,11 +133,12 @@ int Image::get_height() const {
  */
 bool Image::load() {
     int n;
-    unsigned char* data = stbi_load(_filename.c_str(),&_width,&_height,&n, 4);
+    unsigned char* data = stbi_load(_filename.c_str(),&_width,&_height,&n, 3);
     if (data != nullptr) {
-        _image = vector<unsigned char>(data, data + _width * _height * 4);
+        _image = vector<unsigned char>(data, data + _width * _height * 3);
     }
     stbi_image_free(data);
+    
     return (data != nullptr);
 }
 
@@ -156,13 +157,13 @@ bool Image::load_palette() {
     vector<unsigned char> _palette_1D;
     vector<vector<unsigned char>> palette_row;
     vector<unsigned char> pixel;
-    size_t RGBA = 4;
+    size_t RGBA = 3;
     string palette_file = "palette.png";
 
     int n;
-    unsigned char* data = stbi_load(palette_file.c_str(),&_palette_width,&_palette_height,&n, 4);
+    unsigned char* data = stbi_load(palette_file.c_str(),&_palette_width,&_palette_height,&n, 3);
     if (data != nullptr) {
-        _palette_1D = vector<unsigned char>(data, data + _palette_width * _palette_height * 4);
+        _palette_1D = vector<unsigned char>(data, data + _palette_width * _palette_height * 3);
     }
     stbi_image_free(data);
     if (data == nullptr) {
@@ -222,23 +223,14 @@ void Image::scaled_greyscale_image() {
     
     for (int i = 0; i < _scaled_height; i++) {
         for (int j = 0; j < _scaled_width; j++) {
-            greyscale_row.push_back(convolve(j, i));
+            int greyscale_pix = convolve(j, i);
+            greyscale_row.push_back(greyscale_pix);
         }
         _greyscale_image.push_back(greyscale_row);
         greyscale_row.clear();
     }
 }
 
-// void Image::scaled_grayscale_image(const Mat & frame) {
-//     vector<int> greyscale_row;
-
-//     for (int i =0; i < _scaled_height; i++) {
-//         for (int j = 0; j < _scaled_width; j++) {
-//             greyscale_row.push_back()
-//         }
-//     }
-//     Vec3b pixel = frame.at<Vec3b>()
-// }
 
 /**
  * @brief Convolves the kernel with the _greyscale_image at pixel x_pos y_pos
@@ -449,6 +441,7 @@ void Image::to_curses_multithread(WINDOW * win) {
     
     for (auto& t : thread_grp) {
         t.join();
+        delete t;
     }
     
     for (int i = 0; i < _scaled_height; i++) {
@@ -516,18 +509,22 @@ void Image::to_curses(WINDOW * win) {
  * @brief Instanciates the output array with the correct rgb values to be written
  */
 void Image::to_ascii_png() {
-    int output_size = (_scaled_width * _scalar) * (_scaled_width * _scalar) * CHANNELS;
+    int output_size = (_scaled_width * _scalar) * (_scaled_height * _scalar) * CHANNELS;
     _output = new unsigned char[output_size];
     unsigned char *pix = _output;
-    
+
     for (int i = 0; i < _scaled_height; i++) {
-        for (int palette_row = 0; palette_row < 8; palette_row++) {
+        for (int output_row = 0; output_row < _scalar; output_row++) {  
+            // Map output row back to source palette row (0-7)
+            int palette_row = (output_row * 8) / _scalar;
+            
             for (int j = 0; j < _scaled_width; j++) {
-
-                int ascii_texture_start_col = _ascii_indeces[i][j] * 8;
-
-                for (int palette_col = ascii_texture_start_col; palette_col < 
-                    (ascii_texture_start_col + 8); palette_col++) {
+                int ascii_texture_start_col = _ascii_indeces[i][j] * 8;  // Always 8, since palette chars are 8 wide
+                
+                for (int output_col = 0; output_col < _scalar; output_col++) {
+                    // Map output column back to source palette column (0-7 within the character)
+                    int palette_col = ascii_texture_start_col + (output_col * 8) / _scalar;
+                    
                     for (int c = 0; c < 3; c++) {
                         *(pix + c) = _palette[palette_row][palette_col][c];
                     }
@@ -536,7 +533,7 @@ void Image::to_ascii_png() {
             }
         }
     }
-    stbi_write_png(_output_filename.c_str(), _scaled_width * _scalar, _scaled_height 
-                   * _scalar, CHANNELS, _output, _scaled_width * _scalar * CHANNELS);
+    stbi_write_png(_output_filename.c_str(), _scaled_width * _scalar, _scaled_height * _scalar, 
+                CHANNELS, _output, _scaled_width * _scalar * CHANNELS);
     delete[] _output;
 }

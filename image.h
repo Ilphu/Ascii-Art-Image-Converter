@@ -59,7 +59,7 @@ private:
     vector<unsigned char> _image;
     unsigned char *_output;
     vector<vector<vector<unsigned char>>> _palette;
-    string _ascii_palette = " ,;oeb@#MW-\\|/";
+    string _ascii_palette = " .;iroebAM-\\|/";
     vector<vector<int>> _greyscale_image;
     vector<vector<int>> _dog;
     vector<vector<int>> _ascii_indeces;

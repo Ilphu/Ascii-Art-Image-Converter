@@ -8,7 +8,6 @@ const int CHANNELS = 3;
 
 #include <iostream>
 #include <vector>
-#include <cmath>
 #include <thread>
 #include <cstdio>
 #include <filesystem>
@@ -17,13 +16,18 @@ const int CHANNELS = 3;
 #include "stb_image.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
-//#include <opencv2/opencv.hpp>
 #include "image.h"
 
 using namespace std;
 using namespace cv;
 namespace fs = filesystem;
 
+void get_files(const string& path, vector<string>& dir) {
+    for (const auto & entry : fs::directory_iterator(path)) {
+        dir.push_back(entry.path().filename().string());
+    }
+    sort(dir.begin(), dir.end());
+}
 
 void write_frame(const int& scalar, const int& first_frame, const int& num_frames, 
                  const vector<string>& frame_filenames, 
@@ -37,10 +41,8 @@ void write_frame(const int& scalar, const int& first_frame, const int& num_frame
             return;
         }
         
-        // cout << frame_filename << endl;
         frame.set_filename(frame_filenames[i]);
         frame.set_output_filename(output_frame_filenames[i]);
-        //cout << frame_filenames[i] << endl;
 
         bool success = frame.load();
         if (!success) {
@@ -89,23 +91,19 @@ void write_image() {
 }
 
 void write_video() {
-    string frame_filename_base;
-    string output_frame_base;
-    int num_frames;
-
-    cout << "Input filename base:" << endl;
-    cin >> frame_filename_base;
-    cout << "Output filename base:" << endl;
-    cin >> output_frame_base;
-    cout << "Number of frames:" << endl;
-    cin >> num_frames;
+    string home = getenv("HOME");
+    string dir_path;
+    cout << "PATH to directory containing frames eg: `~/Downloads/frames/`\n";
+    cin >> dir_path;
+    dir_path = home + dir_path;
 
     vector<string> frame_filenames;
     vector<string> output_frame_filenames;
-    for (int i = 0; i < num_frames; i++) {
-        frame_filenames.push_back("examples/input_frames/" + frame_filename_base + to_string(i + 1) + ".png");
-        output_frame_filenames.push_back("examples/output_frames/" + output_frame_base + to_string(i + 1) + ".png");
-        cout << frame_filenames[i] << endl;
+    get_files(dir_path, frame_filenames);
+
+    size_t num_frames = frame_filenames.size();
+    for (size_t i = 0; i < num_frames; i++) {
+        output_frame_filenames.push_back("examples/output_frames/" + frame_filenames[i]);
     }
     
     int scalar = 8;
@@ -134,19 +132,10 @@ void write_curses(string img_filename, WINDOW * win) {
         return;
     }
 
-    // int width, height;
-    // getmaxyx(win, height, width);
-
     img.set_dog_threshold(0);
     img.to_curses(win);
 }
 
-void get_files(const string& path, vector<string>& dir) {
-    for (const auto & entry : fs::directory_iterator(path)) {
-        dir.push_back(entry.path().filename().string());
-    }
-    sort(dir.begin(), dir.end());
-}
 
 void curses_video() {
     initscr();
@@ -155,11 +144,8 @@ void curses_video() {
     vector<string> dir;
     get_files("/Users/garrettrhoads/Documents/programmingProjects/CPP/Personal/Ascii-Art-Image-Converter/examples/input_frames", dir);
     for (size_t frame = 0; frame < dir.size(); frame++) {
-        //cout << dir[frame] << endl;
         string filename = "examples/input_frames/" + dir[frame];
         write_curses(filename.c_str(), stdscr);
-        // clear();
-        // refresh();
     }
     endwin();
 }
@@ -168,9 +154,8 @@ void mirror() {
     VideoCapture cap;
     cap.open(0);
 
-    cap.set(CAP_PROP_FRAME_WIDTH, 600);
-    cap.set(CAP_PROP_FRAME_HEIGHT, 375);
-    //cout << "here" << endl;
+    cap.set(CAP_PROP_FRAME_WIDTH, 384);
+    cap.set(CAP_PROP_FRAME_HEIGHT, 240);
 
     Mat frame;
     initscr();
@@ -195,16 +180,54 @@ void mirror() {
     destroyAllWindows();
 }
 
+void parse_input(int argc, vector<string> argv) {
+    if (argc != 2) { 
+        cout << "expected one command line argument, use -h or --help for a list of options" << endl; 
+        return;
+    }
+
+    if ((argv[1] == "-h") || (argv[1] == "--help")) {
+        cout << "List of command line arguments: \n-h\t--help\t\t\tShows the list of command line arguments\n-i\t--image\t\t\tConverts an image at a given path to ascii art\n-s\t--set\t\t\tConverts a set of images in a given directory to ascii art\n-tv\t--terminal-video\tRenders a set of images in a directory in alphabetical order on the terminal\n-l\t--live\t\t\tOpens a live ascii render of what your webcam sees\n-tui\t\t\t\tOpens a text user interface for ease of use" << endl;
+        return;
+    }
+    
+    if ((argv[1] == "-i") || (argv[1] == "--image")) {
+        write_image();
+        return;
+    }
+
+    if ((argv[1] == "-s") || (argv[1] == "--set")) {
+        write_video();
+        return;
+    }
+
+    if ((argv[1] == "-tv") || (argv[1] == "--terminal-video")) {
+        curses_video();
+        return;
+    }
+
+    if ((argv[1] == "-l") || (argv[1] == "--live")) {
+        mirror();
+        return;
+    }
+
+    if (argv[1] == "-tui") {
+        cout << "not implemented yet" << endl;
+        return;
+    }
+}
+
 /**
  * @brief I/O and controls operation of the program
  * 
  * @return int 
  */
 int main(int argc, char ** argv) {
-    if ((argc == 2) && (strcmp(argv[1], "--video") == 0)) {
-        write_video();
-    } else {
-        mirror();
+    vector<string> arguments;
+    arguments.reserve(argc);  
+    for (size_t i = 0; i < argc; i++) {
+        arguments.push_back(argv[i]);
     }
+    parse_input(argc, arguments);
     return 0;
 }
