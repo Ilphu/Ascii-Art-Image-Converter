@@ -441,7 +441,6 @@ void Image::to_curses_multithread(WINDOW * win) {
     
     for (auto& t : thread_grp) {
         t.join();
-        delete t;
     }
     
     for (int i = 0; i < _scaled_height; i++) {
