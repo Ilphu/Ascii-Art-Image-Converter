@@ -16,6 +16,8 @@ Simply run `cmake ./ && make` to create the `Makefile` and `make` the `ascii` bi
 
 Run `./ascii -h` to show all command line options and use the one that fits your needs. Some features are still very a much a work in progress so don't be surprised if something works in a confusing way or doesn't work currently.
 
+Try `./ascii -l` for my favorite feature if you have a camera connected you your computer.
+
 ## Examples and Extra Info:
 
 I have included some demo images in the `Examples` directory and their ascii counter parts. These have worked well in my opinion due to high contrast edges which make everything easier to see.
