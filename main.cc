@@ -152,7 +152,14 @@ void curses_video() {
 
 void mirror() {
     VideoCapture cap;
-    cap.open(0);
+
+    for (int i = 0; i < 10; i++) {
+        cap.open(i);
+        if (cap.isOpened()) {
+            cout << "Camera found at index: " << i << endl;
+            break;
+        }
+    }
 
     cap.set(CAP_PROP_FRAME_WIDTH, 384);
     cap.set(CAP_PROP_FRAME_HEIGHT, 240);
